@@ -3,19 +3,32 @@ const express    = require('express');
 const cors = require('cors');
 
 // === DATABASE ===
-const connection = mysql.createConnection({
+const connectionToBookDB = mysql.createConnection({
   host     : 'localhost',
   user     : 'librarian',
-  password : 'test',
+  password : '1234',
   database : 'book_db'
 }); 
-connection.connect();
+connectionToBookDB.connect();
 var bookDB = null;
-connection.query('SELECT * from book_info', function (error, results, fields) {
+connectionToBookDB.query('SELECT * from book_info', function (error, results, fields) {
   if (error) throw error;
   bookDB = results;
 });
-connection.end();
+connectionToBookDB.end();
+
+const connectionToUserDB = mysql.createConnection({
+  host     : 'localhost',
+  user     : 'user_manager',
+  password : '1234',
+  database : 'user_db'
+}); 
+connectionToUserDB.connect();
+var userDB = null;
+connectionToUserDB.query('SELECT * from user_info', function (error, results, fields) {
+  if (error) throw error;
+  userDB = results;
+});
 
 // === WEB ===
 const app = express();
@@ -27,20 +40,26 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 // PAGES
-app.get('/', function(req, res) {
-  res.send("Hello World!");
-});
-
 app.get('/book_db/book_info', function(req, res) {
   res.json(bookDB);
 });
 
-app.get('/login', function(req, res) {
-  res.send("You are in login page now.");
-})
-app.get('/login/signin', function(req, res) {
-  res.send("Sign in => ");
-})
+app.get('/user_db/user_info', function(req, res) {
+  res.json(userDB);
+});
+app.post('/signin', express.json(), function(req, res) {
+  // connectionToUserDB.connect();
+  console.log(req.body);
+
+  var sql = 'INSERT INTO user_db.user_info (id, pwd, email) VALUES(?,?,?)';
+  var param = [req.body.insertId, req.body.insertPassword, req.body.insertEmail];
+
+  connectionToUserDB.query(sql, param, (error, rows, fields) => {
+    if (error) throw error;
+    console.log('User info is: ', rows);
+    //connectionToUserDB.end();
+  });
+});
 
 app.listen(4000, () => {
   console.log("server start!");
