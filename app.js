@@ -1,6 +1,7 @@
 const mysql      = require('mysql');
 const express    = require('express');
 const cors = require('cors');
+const { default: ollama } = require('ollama');
 
 // === DATABASE ===
 const connectionToBookDB = mysql.createConnection({
@@ -59,6 +60,16 @@ app.post('/signin', express.json(), function(req, res) {
     console.log('User info is: ', rows);
     //connectionToUserDB.end();
   });
+});
+
+app.get('/classification', async function(req, res) {
+  const response = await ollama.chat({
+    model: 'llava',
+    messages: [{ role: 'user', content: 'Why is the sky blue?' }],
+    role: 'assistant',
+  });
+
+  res.json(response);
 });
 
 app.listen(4000, () => {
