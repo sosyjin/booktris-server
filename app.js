@@ -46,18 +46,20 @@ app.get('/book_db/book_info', function(req, res) {
 });
 
 app.get('/user_db/user_info', function(req, res) {
+  connectionToUserDB.query('SELECT * from user_info', function (error, results, fields) {
+    if (error) throw error;
+    userDB = results;
+  });
+  
   res.json(userDB);
 });
 app.post('/signin', express.json(), function(req, res) {
   // connectionToUserDB.connect();
-  console.log(req.body);
-
   var sql = 'INSERT INTO user_db.user_info (id, pwd, email) VALUES(?,?,?)';
   var param = [req.body.insertId, req.body.insertPassword, req.body.insertEmail];
 
   connectionToUserDB.query(sql, param, (error, rows, fields) => {
     if (error) throw error;
-    console.log('User info is: ', rows);
     //connectionToUserDB.end();
   });
 });
