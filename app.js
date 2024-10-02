@@ -33,10 +33,14 @@ connectionToUserDB.query('SELECT * from user_info', function (error, results, fi
 
 // === WEB ===
 const app = express();
-
+// FOR PARSING JSON
+app.use(express.json({limit: '100mb'}));
+app.use(express.urlencoded({limit: '100mb', extended: false}));
+/*
 // FOR PARSING JSON
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+*/
 // CORS OFF
 app.use(cors());
 
@@ -64,11 +68,15 @@ app.post('/signin', express.json(), function(req, res) {
   });
 });
 
-app.get('/classification', async function(req, res) {
-  const response = await ollama.chat({
+app.post('/classification', async function(req, res) {
+  var images = req.body.insertImage;
+
+  console.log('insertImage: ', images);
+
+  const response = await ollama.generate({
     model: 'llava',
-    messages: [{ role: 'user', content: 'Why is the sky blue?' }],
-    role: 'assistant',
+    prompt: "The given image is the cover image of a used book. Answer 'Great' if it's in a new state, 'Normal' if it's damaged enough to have problems reading, and 'Bad' if it's damaged enough to have problems reading.",
+    images: [images],
   });
 
   res.json(response);
@@ -76,4 +84,4 @@ app.get('/classification', async function(req, res) {
 
 app.listen(4000, () => {
   console.log("server start!");
-})
+});
