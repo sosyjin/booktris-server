@@ -135,5 +135,20 @@ const socketServer = io(httpServer, {
 socketServer.on("connection", (socket) => {
 	console.log(`socket connected!\nsocket id: ${socket.id}\n`);
 
-	socketServer.emit("message", "Hello World!");
+  // handle join/leave chat room
+  socket.on("join", (roomKey) => {
+    console.log(`${socket.id} entered room named '${roomKey}'`);
+    socket.join(roomKey);
+    socket.roomKey = roomKey;
+  })
+  socket.on("leave", (roomKey) => {
+    socket.leave(roomKey);
+  })
+
+  // handle chat
+  // chat을 emit한 소켓이 속한 룸 구분
+  socket.on("chat", (msg) => {
+    console.log(socket.rooms);
+    socket.to(socket.roomKey).emit("chat", msg);
+  })
 });
