@@ -14,6 +14,11 @@ const connectionToBookDB = mysql.createConnection({
   database: 'book_db'
 });
 connectionToBookDB.connect();
+var bookDB = null;
+connectionToBookDB.query('SELECT * from book_info', function (error, results, fields) {
+  if (error) throw error;
+  bookDB = results;
+});
 
 const connectionToUserDB = mysql.createConnection({
   host: 'localhost',
@@ -22,6 +27,11 @@ const connectionToUserDB = mysql.createConnection({
   database: 'user_db'
 });
 connectionToUserDB.connect();
+var userDB = null;
+connectionToUserDB.query('SELECT * from user_info', function (error, results, fields) {
+  if (error) throw error;
+  userDB = results;
+});
 
 // book_post_db 스키마에 대한 관리자를 추가한 연결 설정
 const connectionToBookPostDB = mysql.createConnection({
@@ -112,7 +122,7 @@ app.post('/signin', express.json(), function(req, res) {
 app.post('/classification', async function(req, res) {
   var images = req.body.insertImage;
 
-  console.log('insertImage: ', images);
+  console.log('Ollama test is processing now!');
 
   const response = await ollama.generate({
     model: 'llava',
