@@ -1,13 +1,16 @@
 const mysql = require('mysql');
+const http = require("http");
 const express = require('express');
+const app = express();
 const cors = require('cors');
+const io = require('socket.io');
 const { default: ollama } = require('ollama');
 
 // === DATABASE CONNECTIONS ===
 const connectionToBookDB = mysql.createConnection({
   host: 'localhost',
   user: 'librarian',
-  password: 'test',
+  password: '1234',
   database: 'book_db'
 });
 connectionToBookDB.connect();
@@ -24,21 +27,15 @@ connectionToUserDB.connect();
 const connectionToBookPostDB = mysql.createConnection({
   host: 'localhost',
   user: 'book_post_manager',  // 추가된 사용자
-  password: 'abcd',    // 새로 생성된 사용자의 비밀번호
+  password: 'password123',    // 새로 생성된 사용자의 비밀번호
   database: 'book_post_db'
 });
 connectionToBookPostDB.connect();
 
 // === WEB ===
-const app = express();
 // FOR PARSING JSON
 app.use(express.json({limit: '100mb'}));
 app.use(express.urlencoded({limit: '100mb', extended: false}));
-/*
-// FOR PARSING JSON
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-*/
 // CORS OFF
 app.use(cors());
 
@@ -127,6 +124,16 @@ app.post('/classification', async function(req, res) {
 });
 
 // === SERVER LISTENING ===
-app.listen(4000, () => {
-  console.log("server start!");
+const httpServer = http.createServer(app).listen(4000, console.log("server start!"));
+const socketServer = io(httpServer, {
+	cors: {
+		origin: "*",
+		methods: ["GET", "POST"]
+	}
+});
+
+socketServer.on("connection", (socket) => {
+	console.log(`socket connected!\nsocket id: ${socket.id}\n`);
+
+	socketServer.emit("message", "Hello World!");
 });
