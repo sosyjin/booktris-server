@@ -36,8 +36,8 @@ connectionToUserDB.query('SELECT * from user_info', function (error, results, fi
 // book_post_db 스키마에 대한 관리자를 추가한 연결 설정
 const connectionToBookPostDB = mysql.createConnection({
   host: 'localhost',
-  user: 'book_post_manager',  // 추가된 사용자
-  password: 'password123',    // 새로 생성된 사용자의 비밀번호
+  user: 'book_post_manager',
+  password: 'password123',
   database: 'book_post_db'
 });
 connectionToBookPostDB.connect();
@@ -50,7 +50,7 @@ app.use(express.urlencoded({limit: '100mb', extended: false}));
 app.use(cors());
 
 // === BOOK POST ROUTES ===
-// book_post_db에서 모든 게시글 가져오기
+// Get all the posts from book_post_db
 app.get('/book_post_db/posts', function(req, res) {
   connectionToBookPostDB.query('SELECT * FROM post', function (error, results) {
     if (error) throw error;
@@ -58,7 +58,7 @@ app.get('/book_post_db/posts', function(req, res) {
   });
 });
 
-// book_post_db에 새로운 게시글 추가하기
+// Post new post to book_post_db
 app.post('/book_post_db/posts', function(req, res) {
   const {
     user_id,
@@ -75,6 +75,8 @@ app.post('/book_post_db/posts', function(req, res) {
     publisher
   } = req.body;
 
+  console.log("req.body: ", req.body);
+
   const sql = `
     INSERT INTO post (
       user_id, location, book_condition, book_description, price, transaction_type, image_urls, main_image_url, 
@@ -86,7 +88,6 @@ app.post('/book_post_db/posts', function(req, res) {
     user_id, location, book_condition, book_description, price, transaction_type, JSON.stringify(image_urls), main_image_url, 
     book_title, author, translator, publisher
   ];
-
   connectionToBookPostDB.query(sql, params, (error, results) => {
     if (error) {
       console.error(error);
@@ -126,7 +127,7 @@ app.post('/classification', async function(req, res) {
 
   const response = await ollama.generate({
     model: 'llava',
-    prompt: "The given image is the cover image of a used book. Answer 'Great' if it's in a new state, 'Normal' if it's damaged enough to have problems reading, and 'Bad' if it's damaged enough to have problems reading.",
+    prompt: "The given image is the cover image of a used book. Answer 'Great' if it's in a new state, 'Normal' if it's damaged enough to have problems reading, and 'Bad' if it's damaged enough to have problems reading. You should answer out of 'Great', 'Normal', 'Bad'. There is no need to explain the others.",
     images: [images],
   });
 
@@ -156,7 +157,6 @@ socketServer.on("connection", (socket) => {
   })
 
   // handle chat
-  // chat을 emit한 소켓이 속한 룸 구분
   socket.on("chat", (msg) => {
     console.log(socket.rooms);
     socket.to(socket.roomKey).emit("chat", msg);
