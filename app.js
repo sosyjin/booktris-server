@@ -5,6 +5,9 @@ const app = express();
 const cors = require('cors');
 const io = require('socket.io');
 const { default: ollama } = require('ollama');
+const jwt = require('jsonwebtoken');
+const { ACCESS_SECRET, REFRESH_SECRET } = require('./env.js');
+const cookieParser = require('cookie-parser');
 
 // === DATABASE CONNECTIONS ===
 const connectionToBookDB = mysql.createConnection({
@@ -14,11 +17,6 @@ const connectionToBookDB = mysql.createConnection({
   database: 'book_db'
 });
 connectionToBookDB.connect();
-var bookDB = null;
-connectionToBookDB.query('SELECT * from book_info', function (error, results, fields) {
-  if (error) throw error;
-  bookDB = results;
-});
 
 const connectionToUserDB = mysql.createConnection({
   host: 'localhost',
@@ -27,11 +25,6 @@ const connectionToUserDB = mysql.createConnection({
   database: 'user_db'
 });
 connectionToUserDB.connect();
-var userDB = null;
-connectionToUserDB.query('SELECT * from user_info', function (error, results, fields) {
-  if (error) throw error;
-  userDB = results;
-});
 
 const connectionToBookPostDB = mysql.createConnection({
   host: 'localhost',
@@ -46,9 +39,13 @@ connectionToBookPostDB.connect();
 app.use(express.json({limit: '100mb'}));
 app.use(express.urlencoded({limit: '100mb', extended: false}));
 // CORS OFF
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:3000",
+  methods: ["GET", "POST"],
+  credentials: true,
+}));
+app.use(cookieParser());
 
-// === BOOK POST ROUTES ===
 // Get all the posts from book_post_db
 app.get('/book_post_db/posts', function(req, res) {
   connectionToBookPostDB.query('SELECT * FROM post', function (error, results) {
@@ -104,18 +101,78 @@ app.post('/book_post_db/search', function(req, res) {
   });
 });
 
-// === EXISTING ROUTES ===
-app.get('/book_db/book_info', function(req, res) {
-  res.json(bookDB);
+// === CORRECTION NEEDED !!! ===
+app.get('/book_db/book_info', function(req,res) {
+  connectionToBookDB.query("SELECT * FROM book_info", function(error, results, fields) {
+    res.json(results);
+  })
 });
 
-app.get('/user_db/user_info', function(req, res) {
-  connectionToUserDB.query('SELECT * from user_info', function (error, results, fields) {
-    if (error) throw error;
-    userDB = results;
-    res.json(userDB);
+// Login with JWT
+app.post('/accessTokenCheck', function(req, res) {
+  // Check for existence login cookie
+  try {
+    const token = req.cookies.accessToken;
+    const data = jwt.verify(token, ACCESS_SECRET);
+    connectionToUserDB.query(`SELECT * FROM user_info WHERE id='${data.id}' AND PWD='${data.password}'`, function (error, results, fields) {
+      if(error) {
+        throw error;
+      } else if (results != '') {
+        res.json(data.id);
+      } else {
+        res.json('');
+      }
+    });
+  } catch (error) {
+    res.json('');
+  }
+});
+app.post('/user_db/user_info', function(req, res) {
+  connectionToUserDB.query(`SELECT * FROM user_info WHERE id='${req.body.id}' AND pwd='${req.body.password}'`, function (error, results, fields) {    
+    if (error) {
+      throw error;
+    } else if (results != '') {
+      // Create JWT
+      const accessToken = jwt.sign({
+        id: req.body.id,
+        password: req.body.password,
+      }, ACCESS_SECRET, {
+        expiresIn: "5m",
+        issuer: "9012"
+      });
+      const refreshToken = jwt.sign({
+        id: req.body.id,
+        password: req.body.password,
+      }, REFRESH_SECRET, {
+        expiresIn: "24h",
+        issuer: "9012"
+      });
+  
+      // SEND JWT to client
+      res.cookie("accessToken", accessToken, {
+        secure: false,
+        httpOnly: true,
+      });
+      res.cookie("refreshToken", refreshToken, {
+        secure: false,
+        httpOnly: true,
+      });
+  
+      res.json(true);
+    } else {
+      res.json(false);
+    }
   });
 });
+app.post('/logout', function(req, res) {
+  try {
+    res.cookie("accessToken", '');
+    res.json(true);
+  } catch (error) {
+    console.log(error);
+    res.json(false);
+  }
+})
 
 app.post('/signin', express.json(), function(req, res) {
   var sql = 'INSERT INTO user_db.user_info (id, pwd, email) VALUES(?,?,?)';
@@ -144,13 +201,13 @@ app.post('/classification', async function(req, res) {
 const httpServer = http.createServer(app).listen(4000, console.log("server start!"));
 const socketServer = io(httpServer, {
 	cors: {
-		origin: "*",
+		origin: "http://localhost:3000",
 		methods: ["GET", "POST"]
 	}
 });
 
 socketServer.on("connection", (socket) => {
-	console.log(`socket connected!\nsocket id: ${socket.id}\n`);
+	console.log(`\nsocket connected!\n`);
 
   // handle join/leave chat room
   socket.on("join", (roomKey) => {
