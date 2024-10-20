@@ -33,7 +33,6 @@ connectionToUserDB.query('SELECT * from user_info', function (error, results, fi
   userDB = results;
 });
 
-// book_post_db 스키마에 대한 관리자를 추가한 연결 설정
 const connectionToBookPostDB = mysql.createConnection({
   host: 'localhost',
   user: 'book_post_manager',
@@ -57,7 +56,6 @@ app.get('/book_post_db/posts', function(req, res) {
     res.json(results);
   });
 });
-
 // Post new post to book_post_db
 app.post('/book_post_db/posts', function(req, res) {
   const {
@@ -74,8 +72,6 @@ app.post('/book_post_db/posts', function(req, res) {
     translator,
     publisher
   } = req.body;
-
-  console.log("req.body: ", req.body);
 
   const sql = `
     INSERT INTO post (
@@ -95,6 +91,16 @@ app.post('/book_post_db/posts', function(req, res) {
     } else {
       res.status(201).json({ message: 'Post added successfully', postId: results.insertId });
     }
+  });
+});
+app.post('/book_post_db/search', function(req, res) {
+  const keyword = req.body.keyword;
+  const sql = `SELECT * FROM post WHERE book_title='${keyword}' OR author='${keyword}'`
+
+  connectionToBookPostDB.query(sql, function(error, results, fields) {
+    if(error) throw error;
+
+    res.json(results);
   });
 });
 
@@ -148,7 +154,7 @@ socketServer.on("connection", (socket) => {
 
   // handle join/leave chat room
   socket.on("join", (roomKey) => {
-    console.log(`${socket.id} entered room named '${roomKey}'`);
+    // console.log(`${socket.id} entered room named '${roomKey}'`);
     socket.join(roomKey);
     socket.roomKey = roomKey;
   })
@@ -158,7 +164,6 @@ socketServer.on("connection", (socket) => {
 
   // handle chat
   socket.on("chat", (msg) => {
-    console.log(socket.rooms);
     socket.to(socket.roomKey).emit("chat", msg);
   })
 });
