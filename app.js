@@ -109,7 +109,7 @@ app.get('/book_db/book_info', function(req,res) {
 });
 
 // Login with JWT
-app.post('/accessTokenCheck', function(req, res) {
+app.get('/accessTokenCheck', function(req, res) {
   // Check for existence login cookie
   try {
     const token = req.cookies.accessToken;
@@ -118,6 +118,38 @@ app.post('/accessTokenCheck', function(req, res) {
       if(error) {
         throw error;
       } else if (results != '') {
+        res.json(data.id);
+      } else {
+        res.json('');
+      }
+    });
+  } catch (error) {
+    res.json('');
+  }
+});
+app.get('/refreshTokenCheck', function(req, res) {
+  // Check for existence login cookie
+  try {
+    const token = req.cookies.refreshToken;
+    const data = jwt.verify(token, REFRESH_SECRET);
+    connectionToUserDB.query(`SELECT * FROM user_info WHERE id='${data.id}' AND PWD='${data.password}'`, function (error, results, fields) {
+      if(error) {
+        throw error;
+      } else if (results != '') {
+        // Create new access token
+        const accessToken = jwt.sign({
+          id: data.id,
+          password: data.password,
+        }, ACCESS_SECRET, {
+          expiresIn: "5m",
+          issuer: "9012"
+        });
+
+        res.cookie("accessToken", accessToken, {
+          secure: false,
+          httpOnly: true,
+        });
+
         res.json(data.id);
       } else {
         res.json('');
@@ -196,6 +228,16 @@ app.post('/classification', async function(req, res) {
 
   res.json(response);
 });
+
+app.get('/user_db/user_info', function(req, res) {
+  connectionToUserDB.query("SELECT * FROM user_info", function(error, results, fields) {
+    try {
+      res.json(results);
+    } catch (error) {
+      console.log(error);
+    }
+  });
+})
 
 // === SERVER LISTENING ===
 const httpServer = http.createServer(app).listen(4000, console.log("server start!"));
