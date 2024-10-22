@@ -5,15 +5,12 @@ const app = express();
 const cors = require('cors');
 const io = require('socket.io');
 const { default: ollama } = require('ollama');
-const jwt = require('jsonwebtoken');
-const { ACCESS_SECRET, REFRESH_SECRET } = require('./env.js');
-const cookieParser = require('cookie-parser');
 
 // === DATABASE CONNECTIONS ===
 const connectionToBookDB = mysql.createConnection({
   host: 'localhost',
   user: 'librarian',
-  password: '1234',
+  password: 'test',
   database: 'book_db'
 });
 connectionToBookDB.connect();
@@ -26,10 +23,11 @@ const connectionToUserDB = mysql.createConnection({
 });
 connectionToUserDB.connect();
 
+// book_post_db 스키마에 대한 관리자를 추가한 연결 설정
 const connectionToBookPostDB = mysql.createConnection({
   host: 'localhost',
-  user: 'book_post_manager',
-  password: 'password123',
+  user: 'book_post_manager',  // 추가된 사용자
+  password: 'abcd',    // 새로 생성된 사용자의 비밀번호
   database: 'book_post_db'
 });
 connectionToBookPostDB.connect();
@@ -39,21 +37,18 @@ connectionToBookPostDB.connect();
 app.use(express.json({limit: '100mb'}));
 app.use(express.urlencoded({limit: '100mb', extended: false}));
 // CORS OFF
-app.use(cors({
-  origin: "http://localhost:3000",
-  methods: ["GET", "POST"],
-  credentials: true,
-}));
-app.use(cookieParser());
+app.use(cors());
 
-// Get all the posts from book_post_db
+// === BOOK POST ROUTES ===
+// book_post_db에서 모든 게시글 가져오기
 app.get('/book_post_db/posts', function(req, res) {
   connectionToBookPostDB.query('SELECT * FROM post', function (error, results) {
     if (error) throw error;
     res.json(results);
   });
 });
-// Post new post to book_post_db
+
+// book_post_db에 새로운 게시글 추가하기
 app.post('/book_post_db/posts', function(req, res) {
   const {
     user_id,
@@ -81,6 +76,7 @@ app.post('/book_post_db/posts', function(req, res) {
     user_id, location, book_condition, book_description, price, transaction_type, JSON.stringify(image_urls), main_image_url, 
     book_title, author, translator, publisher
   ];
+
   connectionToBookPostDB.query(sql, params, (error, results) => {
     if (error) {
       console.error(error);
@@ -90,14 +86,17 @@ app.post('/book_post_db/posts', function(req, res) {
     }
   });
 });
-app.post('/book_post_db/search', function(req, res) {
-  const keyword = req.body.keyword;
-  const sql = `SELECT * FROM post WHERE book_title='${keyword}' OR author='${keyword}'`
 
-  connectionToBookPostDB.query(sql, function(error, results, fields) {
-    if(error) throw error;
+// === EXISTING ROUTES ===
+app.get('/book_db/book_info', function(req, res) {
+  res.json(bookDB);
+});
 
-    res.json(results);
+app.get('/user_db/user_info', function(req, res) {
+  connectionToUserDB.query('SELECT * from user_info', function (error, results, fields) {
+    if (error) throw error;
+    userDB = results;
+    res.json(userDB);
   });
 });
 
@@ -218,11 +217,11 @@ app.post('/signin', express.json(), function(req, res) {
 app.post('/classification', async function(req, res) {
   var images = req.body.insertImage;
 
-  console.log('Ollama test is processing now!');
+  console.log('insertImage: ', images);
 
   const response = await ollama.generate({
     model: 'llava',
-    prompt: "The given image is the cover image of a used book. Answer 'Great' if it's in a new state, 'Normal' if it's damaged enough to have problems reading, and 'Bad' if it's damaged enough to have problems reading. You should answer out of 'Great', 'Normal', 'Bad'. There is no need to explain the others.",
+    prompt: "The given image is the cover image of a used book. Answer 'Great' if it's in a new state, 'Normal' if it's damaged enough to have problems reading, and 'Bad' if it's damaged enough to have problems reading.",
     images: [images],
   });
 
@@ -243,17 +242,17 @@ app.get('/user_db/user_info', function(req, res) {
 const httpServer = http.createServer(app).listen(4000, console.log("server start!"));
 const socketServer = io(httpServer, {
 	cors: {
-		origin: "http://localhost:3000",
+		origin: "*",
 		methods: ["GET", "POST"]
 	}
 });
 
 socketServer.on("connection", (socket) => {
-	console.log(`\nsocket connected!\n`);
+	console.log(`socket connected!\nsocket id: ${socket.id}\n`);
 
   // handle join/leave chat room
   socket.on("join", (roomKey) => {
-    // console.log(`${socket.id} entered room named '${roomKey}'`);
+    console.log(`${socket.id} entered room named '${roomKey}'`);
     socket.join(roomKey);
     socket.roomKey = roomKey;
   })
@@ -262,7 +261,9 @@ socketServer.on("connection", (socket) => {
   })
 
   // handle chat
+  // chat을 emit한 소켓이 속한 룸 구분
   socket.on("chat", (msg) => {
+    console.log(socket.rooms);
     socket.to(socket.roomKey).emit("chat", msg);
   })
 });
