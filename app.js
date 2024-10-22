@@ -10,10 +10,13 @@ const { default: ollama } = require('ollama');
 const connectionToBookDB = mysql.createConnection({
   host: 'localhost',
   user: 'librarian',
-  password: 'test',
+  password: '1234',
   database: 'book_db'
 });
 connectionToBookDB.connect();
+// Correction needed !!
+let bookDB = null;
+bookDB = connectionToBookDB.query("SELECT * FROM book_info");
 
 const connectionToUserDB = mysql.createConnection({
   host: 'localhost',
@@ -27,7 +30,7 @@ connectionToUserDB.connect();
 const connectionToBookPostDB = mysql.createConnection({
   host: 'localhost',
   user: 'book_post_manager',  // 추가된 사용자
-  password: 'abcd',    // 새로 생성된 사용자의 비밀번호
+  password: 'password123',    // 새로 생성된 사용자의 비밀번호
   database: 'book_post_db'
 });
 connectionToBookPostDB.connect();
