@@ -14,9 +14,6 @@ const connectionToBookDB = mysql.createConnection({
   database: 'book_db'
 });
 connectionToBookDB.connect();
-// Correction needed !!
-let bookDB = null;
-bookDB = connectionToBookDB.query("SELECT * FROM book_info");
 
 const connectionToUserDB = mysql.createConnection({
   host: 'localhost',
@@ -91,10 +88,6 @@ app.post('/book_post_db/posts', function(req, res) {
 });
 
 // === EXISTING ROUTES ===
-app.get('/book_db/book_info', function(req, res) {
-  res.json(bookDB);
-});
-
 app.get('/user_db/user_info', function(req, res) {
   connectionToUserDB.query('SELECT * from user_info', function (error, results, fields) {
     if (error) throw error;
