@@ -10,7 +10,7 @@ const { default: ollama } = require('ollama');
 const connectionToBookDB = mysql.createConnection({
   host: 'localhost',
   user: 'librarian',
-  password: '1234',
+  password: 'test',
   database: 'book_db'
 });
 connectionToBookDB.connect();
@@ -27,7 +27,7 @@ connectionToUserDB.connect();
 const connectionToBookPostDB = mysql.createConnection({
   host: 'localhost',
   user: 'book_post_manager',  // 추가된 사용자
-  password: 'password123',    // 새로 생성된 사용자의 비밀번호
+  password: 'abcd',    // 새로 생성된 사용자의 비밀번호
   database: 'book_post_db'
 });
 connectionToBookPostDB.connect();
@@ -263,3 +263,68 @@ socketServer.on("connection", (socket) => {
     socket.to(socket.roomKey).emit("chat", msg);
   })
 });
+
+
+
+// 사용자의 찜한 게시물 목록 조회
+app.post('/user/favorites', (req, res) => {
+  const { userId } = req.body;
+
+  connectionToUserDB.query(
+    'SELECT favorite_post_ids FROM user_info WHERE id = ?', 
+    [userId], 
+    (error, results) => {
+      if (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+      } else {
+        const favoritePostIds = JSON.parse(results[0]?.favorite_post_ids || '[]');
+        res.status(200).json({ success: true, favoritePostIds });
+      }
+    }
+  );
+});
+
+
+
+
+app.post('/favorites', (req, res) => {
+  const { userId, postId, action } = req.body;
+
+  connectionToUserDB.query(
+    'SELECT favorite_post_ids FROM user_info WHERE id = ?', 
+    [userId], 
+    (error, results) => {
+      if (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+      } else {
+        const favoritePostIds = JSON.parse(results[0]?.favorite_post_ids || '[]');
+
+        if (action === 'add' && !favoritePostIds.includes(postId)) {
+          favoritePostIds.push(postId);
+        } else if (action === 'remove') {
+          const index = favoritePostIds.indexOf(postId);
+          if (index !== -1) favoritePostIds.splice(index, 1);
+        }
+
+        connectionToUserDB.query(
+          'UPDATE user_info SET favorite_post_ids = ? WHERE id = ?',
+          [JSON.stringify(favoritePostIds), userId],
+          (updateError) => {
+            if (updateError) {
+              console.error(updateError);
+              res.status(500).json({ success: false, message: 'Server Error' });
+            } else {
+              // 실시간 반영을 위해 소켓 이벤트 emit
+              socketServer.emit('favoriteUpdated', { userId, postId, action });
+              res.status(200).json({ success: true, favoritePostIds });
+            }
+          }
+        );
+      }
+    }
+  );
+});
+
+
