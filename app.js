@@ -328,3 +328,17 @@ app.post('/favorites', (req, res) => {
 });
 
 
+app.get('/book_post_db/posts', function (req, res) {
+ connectionToBookPostDB.query('SELECT * FROM post', function (error, results) {
+   if (error) {
+     console.error(error);
+     res.status(500).json({ success: false, message: 'Server error' });
+   } else {
+     const formattedResults = results.map(post => ({
+       ...post,
+       image_urls: post.image_urls ? JSON.parse(post.image_urls).slice(0, 4) : []
+     }));
+     res.json(formattedResults);
+   }
+ });
+});
