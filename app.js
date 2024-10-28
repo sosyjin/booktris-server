@@ -91,10 +91,6 @@ app.post('/book_post_db/posts', function(req, res) {
 });
 
 // === EXISTING ROUTES ===
-app.get('/book_db/book_info', function(req, res) {
-  res.json(bookDB);
-});
-
 app.get('/user_db/user_info', function(req, res) {
   connectionToUserDB.query('SELECT * from user_info', function (error, results, fields) {
     if (error) throw error;
