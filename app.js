@@ -211,14 +211,19 @@ app.post('/signin', express.json(), function (req, res) {
 });
 
 app.post('/classification', async function (req, res) {
- var images = req.body.insertImage;
+ let images = [];
+ 
+ // Copying for 'array-like objects' (*유사 배열)
+ for(let i = 0; i < images.length; i++) {
+  images.push(req.body.insertImages[i]);
+ }
 
- console.log('insertImage: ', images);
+ console.log("ollama is running!");
 
  const response = await ollama.generate({
   model: 'llava',
-  prompt: "The given image is the cover image of a used book. Answer 'Great' if it's in a new state, 'Normal' if it's damaged enough to have problems reading, and 'Bad' if it's damaged enough to have problems reading.",
-  images: [images],
+  prompt: "The given image is the cover image of a used book. Answer 'Great' if it's in a new state, 'Normal' if it's damaged enough to have problems reading, and 'Bad' if it's damaged enough to have problems reading. You should answer out of 'Great', 'Normal', 'Bad'. You don't need to explain why.",
+  images: images,
  });
 
  res.json(response);
@@ -264,8 +269,6 @@ socketServer.on("connection", (socket) => {
  })
 });
 
-
-
 // 사용자의 찜한 게시물 목록 조회
 app.post('/user/favorites', (req, res) => {
  const { userId } = req.body;
@@ -284,9 +287,6 @@ app.post('/user/favorites', (req, res) => {
   }
  );
 });
-
-
-
 
 app.post('/favorites', (req, res) => {
  const { userId, postId, action } = req.body;
@@ -326,7 +326,6 @@ app.post('/favorites', (req, res) => {
   }
  );
 });
-
 
 app.get('/book_post_db/posts', function (req, res) {
  connectionToBookPostDB.query('SELECT * FROM post', function (error, results) {
