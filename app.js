@@ -211,32 +211,34 @@ app.post('/signin', express.json(), function (req, res) {
 });
 
 app.post('/classification', async function (req, res) {
- let images = [];
+  let images = [];
  
- // Copying for 'array-like objects' (*유사 배열)
- for(let i = 0; i < images.length; i++) {
-  images.push(req.body.insertImages[i]);
- }
+  // Copying for 'array-like objects' (*유사 배열)
+  for(let i = 0; i < req.body.insertImages.length; i++) {
+    images.push(req.body.insertImages[i]);
+  }
 
- console.log("ollama is running!");
+  console.log("images: ", images);
+  console.log("ollama is running!");
+  const response = await ollama.generate({
+    model: 'llava',
+    prompt: "The given images are photos of inside of an used book. Answer '좋음' if it's in a new state, '보통' if it's damaged, but still good to read, and '나쁨' if it's damaged enough to have problems reading. You should answer out of '좋음', '보통', '나쁨'. You don't need to explain why.",
+    images: images,
+    keep_alive: "1h",
+  });
+  console.log("response: ", response.response);
 
- const response = await ollama.generate({
-  model: 'llava',
-  prompt: "The given image is the cover image of a used book. Answer 'Great' if it's in a new state, 'Normal' if it's damaged enough to have problems reading, and 'Bad' if it's damaged enough to have problems reading. You should answer out of 'Great', 'Normal', 'Bad'. You don't need to explain why.",
-  images: images,
- });
-
- res.json(response);
+  res.json(response);
 });
 
 app.get('/user_db/user_info', function (req, res) {
- connectionToUserDB.query("SELECT * FROM user_info", function (error, results, fields) {
-  try {
-   res.json(results);
-  } catch (error) {
-   console.log(error);
-  }
- });
+  connectionToUserDB.query("SELECT * FROM user_info", function (error, results, fields) {
+    try {
+      res.json(results);
+    } catch (error) {
+      console.log(error);
+    }
+  });
 })
 
 // === SERVER LISTENING ===
