@@ -218,17 +218,32 @@ app.post('/classification', async function (req, res) {
     images.push(req.body.insertImages[i]);
   }
 
-  console.log("images: ", images);
-  console.log("ollama is running!");
-  const response = await ollama.generate({
-    model: 'llava',
-    prompt: "The given images are photos of inside of an used book. Answer '좋음' if it's in a new state, '보통' if it's damaged, but still good to read, and '나쁨' if it's damaged enough to have problems reading. You should answer out of '좋음', '보통', '나쁨'. You don't need to explain why.",
-    images: images,
-    keep_alive: "1h",
-  });
-  console.log("response: ", response.response);
+  let result = 0;
+  let STATE_GREATD = 10;
+  let STATE_NORMAL = 1;
+  let STATE_BAD = -100;
+  for(let i = 0; i < images.length; i++) {
+    console.log(i, ": ollama is running!");
+    const response = await ollama.generate({
+      model: 'llava',
+      prompt: "The given image is a photo of a page of an used book. Answer '좋음' if it's in a new state, '보통' if it's damaged, but still good to read, and '나쁨' if it's damaged enough to have problems reading. You should answer out of '좋음', '보통', '나쁨'. You don't need to explain why.",
+      images: [images[i]],
+    });
+    const temp = response.response.trim();
+    if(temp === '좋음')
+      result += STATE_GREATD;
+    else if (temp === '보통')
+      result += STATE_NORMAL;
+    else if (temp === '나쁨')
+      result -= STATE_BAD;
+    else
+      console.log("exception error!");
+  }
+  if(result === STATE_GREATD*images.length) result = '좋음'
+  else if(result < 0) result = '나쁨'
+  else result = '보통'
 
-  res.json(response);
+  res.json({ result: result });
 });
 
 app.get('/user_db/user_info', function (req, res) {
