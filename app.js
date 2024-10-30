@@ -62,19 +62,25 @@ app.post('/book_post_db/posts', function (req, res) {
   book_title,
   author,
   translator,
-  publisher
+  publisher,
+  official_title,
+  official_author,
+  official_translator,
+  official_publisher,
+  official_description,
+  official_price
  } = req.body;
 
  const sql = `
     INSERT INTO post (
       user_id, location, book_condition, book_description, price, transaction_type, image_urls, main_image_url, 
-      book_title, author, translator, publisher
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      book_title, author, translator, publisher, official_title, official_author, official_translator, official_publisher, official_description, official_price
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
  const params = [
   user_id, location, book_condition, book_description, price, transaction_type, JSON.stringify(image_urls), main_image_url,
-  book_title, author, translator, publisher
+  book_title, author, translator, publisher, official_title, official_author, official_translator, official_publisher, official_description, official_price
  ];
 
  connectionToBookPostDB.query(sql, params, (error, results) => {
@@ -230,18 +236,21 @@ app.post('/classification', async function (req, res) {
       images: [images[i]],
     });
     const temp = response.response.trim();
-    if(temp === '좋음')
+    if(temp == '좋음')
       result += STATE_GREATD;
-    else if (temp === '보통')
+    else if (temp == '보통')
       result += STATE_NORMAL;
-    else if (temp === '나쁨')
+    else if (temp == '나쁨')
       result -= STATE_BAD;
-    else
-      console.log("exception error!");
+    else { 
+      console.log("exception error!\nresponse: ", temp);
+    }
   }
   if(result === STATE_GREATD*images.length) result = '좋음'
   else if(result < 0) result = '나쁨'
   else result = '보통'
+
+  console.log("result: ", result);
 
   res.json({ result: result });
 });
