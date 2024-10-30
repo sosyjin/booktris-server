@@ -68,19 +68,20 @@ app.post('/book_post_db/posts', function (req, res) {
   official_translator,
   official_publisher,
   official_description,
-  official_price
+  official_price,
+  official_main_image_url
  } = req.body;
 
  const sql = `
     INSERT INTO post (
       user_id, location, book_condition, book_description, price, transaction_type, image_urls, main_image_url, 
-      book_title, author, translator, publisher, official_title, official_author, official_translator, official_publisher, official_description, official_price
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      book_title, author, translator, publisher, official_title, official_author, official_translator, official_publisher, official_description, official_price, official_main_image_url
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
  const params = [
   user_id, location, book_condition, book_description, price, transaction_type, JSON.stringify(image_urls), main_image_url,
-  book_title, author, translator, publisher, official_title, official_author, official_translator, official_publisher, official_description, official_price
+  book_title, author, translator, publisher, official_title, official_author, official_translator, official_publisher, official_description, official_price, official_main_image_url
  ];
 
  connectionToBookPostDB.query(sql, params, (error, results) => {
